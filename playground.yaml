@@ -1,0 +1,32 @@
+state:
+  - name: myAddress
+    type: "address"
+    payable: true
+  - name: yourAddress
+    type: address
+  - name: map
+    type: mapping(address, uint256)
+
+defs:
+  - name: decrement
+  - name: receive
+    visibility:
+      - public
+      - pure
+    type: uint256
+    parameters:
+      - name: amount
+        type: uint
+    locals:
+      - name: foo
+        type: var
+        inMemory: true
+
+events:
+  Received:
+    - name: addr
+      type: address
+    - name: amount
+      type: uint
+    - name: message
+      type: string
