@@ -9,19 +9,6 @@ import (
 // Define a generic AST node structure
 type ASTNode map[string]interface{}
 
-// Define structures for the input AST
-type Declarations struct {
-	ID struct {
-		Name string `json:"name"`
-		Type string `json:"type"`
-	} `json:"id"`
-	Initializer struct {
-		Type  string `json:"type"`
-		Value string `json:"value"`
-	} `json:"initializer"`
-	Type string `json:"type"`
-}
-
 // Define structures for the output AST
 type ContractDefinition struct {
 	Type          string        `json:"type"`
@@ -81,15 +68,9 @@ func main() {
 
 	filePath := "data/helloworld.ast.json"
 
-	jsonData, err := os.ReadFile(filePath)
+	inputAST, err := loadAndUnmarshalJSON(filePath)
 	if err != nil {
-		fmt.Println("Error reading JSON file:", err)
-		return
-	}
-
-	var inputAST ASTNode
-	if err := json.Unmarshal(jsonData, &inputAST); err != nil {
-		fmt.Println("Error parsing input JSON:", err)
+		fmt.Println("Error:", err)
 		return
 	}
 
@@ -101,6 +82,20 @@ func main() {
 	}
 
 	fmt.Println(string(outputJSON))
+}
+
+func loadAndUnmarshalJSON(filePath string) (ASTNode, error) {
+	jsonData, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("reading JSON file: %w", err)
+	}
+
+	var inputAST ASTNode
+	if err := json.Unmarshal(jsonData, &inputAST); err != nil {
+		return nil, fmt.Errorf("parsing input JSON: %w", err)
+	}
+
+	return inputAST, nil
 }
 
 // transpileAST transpiles the input AST to the desired output format.
@@ -137,7 +132,6 @@ func processVariableStatement(contractDef *ContractDefinition, node map[string]i
 
 	for _, decl := range varDeclarations {
 
-		var varType, _ = decl.(map[string]interface{})["type"].(string)
 		var varIdName, _ = decl.(map[string]interface{})["id"].(map[string]interface{})["name"].(string)
 		var varInitializer, _ = decl.(map[string]interface{})["initializer"]
 		var varInitializerValue interface{}
@@ -164,7 +158,7 @@ func processVariableStatement(contractDef *ContractDefinition, node map[string]i
 			}
 		}
 
-		println("@processVariableStatement, varDeclarations type", varType, varIdName, varInitializerValue, varInitializerType)
+		// println("@processVariableStatement, varDeclarations type", varType, varIdName, varInitializerValue, varInitializerType)
 
 		svd := StateVariableDeclaration{
 			Type: "StateVariableDeclaration",
@@ -181,7 +175,7 @@ func processVariableStatement(contractDef *ContractDefinition, node map[string]i
 					Name: varIdName,
 				},
 
-				Visibility: "<fill-with-yaml-spec>",
+				Visibility: "public",
 				IsStateVar: true,
 				// IsDeclaredConst: false,
 				// IsIndexed:       false,
