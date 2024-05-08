@@ -1,0 +1,88 @@
+{
+  "body": [
+    {
+      "declarations": [
+        {
+          "id": {
+            "name": "aString",
+            "type": "Identifier"
+          },
+          "initializer": {
+            "type": "StringLiteral",
+            "value": ""
+          },
+          "type": "VariableDeclaration"
+        }
+      ],
+      "type": "VariableStatement"
+    },
+    {
+      "declarations": [
+        {
+          "id": {
+            "name": "aBool",
+            "type": "Identifier"
+          },
+          "initializer": {
+            "type": "BooleanLiteral",
+            "value": true
+          },
+          "type": "VariableDeclaration"
+        }
+      ],
+      "type": "VariableStatement"
+    },
+    {
+      "declarations": [
+        {
+          "id": {
+            "name": "aUint8",
+            "type": "Identifier"
+          },
+          "initializer": {
+            "arguments": [
+              {
+                "type": "NumericLiteral",
+                "value": 255
+              }
+            ],
+            "callee": {
+              "name": "u8",
+              "type": "Identifier"
+            },
+            "type": "CallExpression"
+          },
+          "type": "VariableDeclaration"
+        }
+      ],
+      "type": "VariableStatement"
+    },
+    {
+      "declarations": [
+        {
+          "id": {
+            "name": "anAddress",
+            "type": "Identifier"
+          },
+          "initializer": {
+            "arguments": [
+              {
+                "type": "StringLiteral",
+                "value": "0xCA35b7d915458EF540aDe6068dFe2F44E8fa733c"
+              }
+            ],
+            "callee": {
+              "name": "address",
+              "type": "Identifier"
+            },
+            "type": "CallExpression"
+          },
+          "type": "VariableDeclaration"
+        }
+      ],
+      "type": "VariableStatement"
+    }
+  ],
+  "name": "PrimitiveTypes",
+  "type": "Contract"
+}

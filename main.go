@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strconv"
 )
 
 // Define a generic AST node structure
@@ -51,24 +52,27 @@ type VariableIdentifier struct {
 }
 
 type VariableExpression struct {
-	Type      string   `json:"type"`
-	Value     string   `json:"value"`
-	Parts     []string `json:"parts"`
-	IsUnicode []bool   `json:"isUnicode"`
+	Type            string      `json:"type"`
+	Value           interface{} `json:"value"`
+	Number          string      `json:"number"`
+	Parts           []string    `json:"parts"`
+	IsUnicode       []bool      `json:"isUnicode"`
+	Subdenomination interface{} `json:"subdenomination"`
 }
 
 type VariableInitialValue struct {
-	Type      string   `json:"type"`
-	Value     string   `json:"value"`
-	Parts     []string `json:"parts"`
-	IsUnicode []bool   `json:"isUnicode"`
+	Type            string      `json:"type"`
+	Value           interface{} `json:"value"`
+	Number          string      `json:"number"`
+	Parts           []string    `json:"parts"`
+	IsUnicode       []bool      `json:"isUnicode"`
+	Subdenomination interface{} `json:"subdenomination"`
 }
 
 func main() {
 
-	filePath := "data/helloworld.ast.json"
-
-	inputAST, err := loadAndUnmarshalJSON(filePath)
+	astFilePath := "data/primitives.ast.json" // AST
+	inputAST, err := loadAndUnmarshalJSON(astFilePath)
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
@@ -81,6 +85,7 @@ func main() {
 		return
 	}
 
+	// println(len(outputJSON))
 	fmt.Println(string(outputJSON))
 }
 
@@ -134,39 +139,18 @@ func processVariableStatement(contractDef *ContractDefinition, node map[string]i
 
 		var varIdName, _ = decl.(map[string]interface{})["id"].(map[string]interface{})["name"].(string)
 		var varInitializer, _ = decl.(map[string]interface{})["initializer"]
-		var varInitializerValue interface{}
+		// var varInitializerValue interface{}
 		var varInitializerType string
 		var varInitialValue interface{} = nil
 		var varExpression interface{} = nil
 
-		if varInitializer != nil {
-			varInitializerValue, _ = decl.(map[string]interface{})["initializer"].(map[string]interface{})["value"].(string)
-			varInitializerType, _ = decl.(map[string]interface{})["initializer"].(map[string]interface{})["type"].(string)
-
-			varInitialValue = VariableInitialValue{
-				Type:      varInitializerType,
-				Value:     varInitializerValue.(string),
-				Parts:     []string{varInitializerValue.(string)},
-				IsUnicode: []bool{false},
-			}
-
-			varExpression = VariableExpression{
-				Type:      "StringLiteral",
-				Value:     varInitializerValue.(string),
-				Parts:     []string{varInitializerValue.(string)},
-				IsUnicode: []bool{false},
-			}
-		}
-
-		// println("@processVariableStatement, varDeclarations type", varType, varIdName, varInitializerValue, varInitializerType)
-
+		// StateVariableDeclaration
 		svd := StateVariableDeclaration{
 			Type: "StateVariableDeclaration",
 			Variables: []Variable{{
 				Type: "VariableDeclaration",
 				TypeName: VariableTypeName{
 					Type:            "ElementaryTypeName",
-					Name:            "string",
 					StateMutability: nil,
 				},
 				Name: varIdName,
@@ -177,11 +161,105 @@ func processVariableStatement(contractDef *ContractDefinition, node map[string]i
 
 				Visibility: "public",
 				IsStateVar: true,
-				// IsDeclaredConst: false,
-				// IsIndexed:       false,
-				// IsImmutable:     false,
 			}},
 		}
+		//
+
+		if varInitializer != nil {
+
+			var varInitializerValue interface{}
+			varInitializerType, _ = decl.(map[string]interface{})["initializer"].(map[string]interface{})["type"].(string)
+
+			if varInitializerType == "CallExpression" {
+				println("@CallExpression varIdName", varIdName)
+				// var varInitializerCallee = varInitializerValue.(map[string]interface{})["callee"].(map[string]interface{})["name"].(string)
+				var varInitializerCallee, _ = varInitializer.(map[string]interface{})["callee"]
+				var varInitializerCalleeName, _ = varInitializerCallee.(map[string]interface{})["name"]
+
+				var varInitializerArguments, _ = varInitializer.(map[string]interface{})["arguments"].([]interface{})
+
+				var varInitializerFirstArgument = varInitializerArguments[0].(interface{})
+
+				// handling 'complicated' types
+				// (u8, u16, ..., u256, i8, i16, ..., i256, address)
+				if varInitializerCalleeName == "u8" {
+					var varInitializerFirstArgumentValue float64 = varInitializerFirstArgument.(map[string]interface{})["value"].(float64)
+					println("@CallExpression varInitializerFirstArgumentValue", varInitializerFirstArgumentValue)
+
+					svd.Variables[0].TypeName.Name = "uint8"
+
+					varInitialValue = VariableInitialValue{
+						Type:            "NumberLiteral",
+						Number:          strconv.FormatFloat(varInitializerFirstArgumentValue, 'f', -1, 64),
+						Subdenomination: nil,
+					}
+
+					varExpression = VariableExpression{
+						Type:            "NumberLiteral",
+						Number:          strconv.FormatFloat(varInitializerFirstArgumentValue, 'f', -1, 64),
+						Subdenomination: nil,
+					}
+
+				} else if varInitializerCalleeName == "address" {
+
+					var varInitializerFirstArgumentValue = varInitializerFirstArgument.(map[string]interface{})["value"]
+					svd.Variables[0].TypeName.Name = "address"
+
+					varInitialValue = VariableInitialValue{
+						Type:            "NumberLiteral",
+						Number:          varInitializerFirstArgumentValue.(string),
+						Subdenomination: nil,
+					}
+
+					varExpression = VariableExpression{
+						Type:            "NumberLiteral",
+						Number:          varInitializerFirstArgumentValue.(string),
+						Subdenomination: nil,
+					}
+				}
+
+			} else { // here variable's types are accessible directly
+				varInitializerValue = decl.(map[string]interface{})["initializer"].(map[string]interface{})["value"]
+				println("@varInitializerValue", varInitializerValue)
+
+				if varInitializerType == "StringLiteral" {
+
+					svd.Variables[0].TypeName.Name = "string"
+
+					varInitialValue = VariableInitialValue{
+						Type:      varInitializerType,
+						Value:     varInitializerValue.(string),
+						Parts:     []string{varInitializerValue.(string)},
+						IsUnicode: []bool{false},
+					}
+
+					varExpression = VariableExpression{
+						Type:      "StringLiteral",
+						Value:     varInitializerValue.(string),
+						Parts:     []string{varInitializerValue.(string)},
+						IsUnicode: []bool{false},
+					}
+				} else if varInitializerType == "BooleanLiteral" {
+
+					svd.Variables[0].TypeName.Name = "bool"
+
+					varInitialValue = VariableInitialValue{
+						Type:  varInitializerType,
+						Value: varInitializerValue.(bool),
+					}
+
+					varExpression = VariableExpression{
+						Type:  varInitializerType,
+						Value: varInitializerValue.(bool),
+					}
+				} else {
+					panic(fmt.Sprintf("unrecognized varInitializerType %v", varInitializerType))
+				}
+
+			}
+		}
+
+		// println("@processVariableStatement, varDeclarations type", varType, varIdName, varInitializerValue, varInitializerType)
 
 		if varExpression != nil {
 			svd.Variables[0].Expression = varExpression.(VariableExpression)
