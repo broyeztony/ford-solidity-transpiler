@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 )
 
 // Define a generic AST node structure
@@ -78,55 +79,16 @@ type VariableInitialValue struct {
 
 func main() {
 
-	inputJSON := `{
-  "body": [
-    {
-      "declarations": [
-        {
-          "id": {
-            "name": "count",
-            "type": "Identifier"
-          },
-          "initializer": null,
-          "type": "VariableDeclaration"
-        }
-      ],
-      "type": "VariableStatement"
-    },
-    {
-      "body": {
-        "body": [
-          {
-            "argument": {
-              "left": {
-                "type": "NumericLiteral",
-                "value": 2
-              },
-              "operator": "*",
-              "right": {
-                "name": "count",
-                "type": "Identifier"
-              },
-              "type": "BinaryExpression"
-            },
-            "type": "ReturnStatement"
-          }
-        ],
-        "type": "BlockStatement"
-      },
-      "name": {
-        "name": "get",
-        "type": "Identifier"
-      },
-      "type": "FunctionDeclaration"
-    }
-  ],
-  "name": "Counter",
-  "type": "Contract"
-}`
+	filePath := "data/helloworld.ast.json"
+
+	jsonData, err := os.ReadFile(filePath)
+	if err != nil {
+		fmt.Println("Error reading JSON file:", err)
+		return
+	}
 
 	var inputAST ASTNode
-	if err := json.Unmarshal([]byte(inputJSON), &inputAST); err != nil {
+	if err := json.Unmarshal(jsonData, &inputAST); err != nil {
 		fmt.Println("Error parsing input JSON:", err)
 		return
 	}

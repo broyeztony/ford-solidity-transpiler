@@ -1,0 +1,22 @@
+{
+  "body": [
+    {
+      "declarations": [
+        {
+          "id": {
+            "name": "greet",
+            "type": "Identifier"
+          },
+          "initializer": {
+            "type": "StringLiteral",
+            "value": "Hello World!"
+          },
+          "type": "VariableDeclaration"
+        }
+      ],
+      "type": "VariableStatement"
+    }
+  ],
+  "name": "HelloWorld",
+  "type": "Contract"
+}
