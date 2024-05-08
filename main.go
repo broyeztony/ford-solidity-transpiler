@@ -53,19 +53,19 @@ type VariableIdentifier struct {
 
 type VariableExpression struct {
 	Type            string      `json:"type"`
-	Value           interface{} `json:"value"`
-	Number          string      `json:"number"`
-	Parts           []string    `json:"parts"`
-	IsUnicode       []bool      `json:"isUnicode"`
+	Value           interface{} `json:"value,omitempty"`
+	Number          string      `json:"number,omitempty"`
+	Parts           []string    `json:"parts,omitempty"`
+	IsUnicode       []bool      `json:"isUnicode,omitempty"`
 	Subdenomination interface{} `json:"subdenomination"`
 }
 
 type VariableInitialValue struct {
 	Type            string      `json:"type"`
-	Value           interface{} `json:"value"`
-	Number          string      `json:"number"`
-	Parts           []string    `json:"parts"`
-	IsUnicode       []bool      `json:"isUnicode"`
+	Value           interface{} `json:"value,omitempty"`
+	Number          string      `json:"number,omitempty"`
+	Parts           []string    `json:"parts,omitempty"`
+	IsUnicode       []bool      `json:"isUnicode,omitempty"`
 	Subdenomination interface{} `json:"subdenomination"`
 }
 
