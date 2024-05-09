@@ -171,7 +171,6 @@ func processVariableStatement(contractDef *ContractDefinition, node map[string]i
 			varInitializerType, _ = decl.(map[string]interface{})["initializer"].(map[string]interface{})["type"].(string)
 
 			if varInitializerType == "CallExpression" {
-				println("@CallExpression varIdName", varIdName)
 				// var varInitializerCallee = varInitializerValue.(map[string]interface{})["callee"].(map[string]interface{})["name"].(string)
 				var varInitializerCallee, _ = varInitializer.(map[string]interface{})["callee"]
 				var varInitializerCalleeName, _ = varInitializerCallee.(map[string]interface{})["name"]
@@ -184,43 +183,40 @@ func processVariableStatement(contractDef *ContractDefinition, node map[string]i
 				// (u8, u16, ..., u256, i8, i16, ..., i256, address)
 				if varInitializerCalleeName == "u8" {
 					var varInitializerFirstArgumentValue float64 = varInitializerFirstArgument.(map[string]interface{})["value"].(float64)
-					println("@CallExpression varInitializerFirstArgumentValue", varInitializerFirstArgumentValue)
-
+					var number = strconv.FormatFloat(varInitializerFirstArgumentValue, 'f', -1, 64)
 					svd.Variables[0].TypeName.Name = "uint8"
-
 					varInitialValue = VariableInitialValue{
 						Type:            "NumberLiteral",
-						Number:          strconv.FormatFloat(varInitializerFirstArgumentValue, 'f', -1, 64),
+						Number:          number,
 						Subdenomination: nil,
 					}
 
 					varExpression = VariableExpression{
 						Type:            "NumberLiteral",
-						Number:          strconv.FormatFloat(varInitializerFirstArgumentValue, 'f', -1, 64),
+						Number:          number,
 						Subdenomination: nil,
 					}
 
 				} else if varInitializerCalleeName == "address" {
 
 					var varInitializerFirstArgumentValue = varInitializerFirstArgument.(map[string]interface{})["value"]
+					var numberStr = varInitializerFirstArgumentValue.(string)
 					svd.Variables[0].TypeName.Name = "address"
 
 					varInitialValue = VariableInitialValue{
 						Type:            "NumberLiteral",
-						Number:          varInitializerFirstArgumentValue.(string),
+						Number:          numberStr,
 						Subdenomination: nil,
 					}
 
 					varExpression = VariableExpression{
 						Type:            "NumberLiteral",
-						Number:          varInitializerFirstArgumentValue.(string),
+						Number:          numberStr,
 						Subdenomination: nil,
 					}
 				}
-
 			} else { // here variable's types are accessible directly
 				varInitializerValue = decl.(map[string]interface{})["initializer"].(map[string]interface{})["value"]
-				println("@varInitializerValue", varInitializerValue)
 
 				if varInitializerType == "StringLiteral" {
 
@@ -232,7 +228,6 @@ func processVariableStatement(contractDef *ContractDefinition, node map[string]i
 						Parts:     []string{varInitializerValue.(string)},
 						IsUnicode: []bool{false},
 					}
-
 					varExpression = VariableExpression{
 						Type:      "StringLiteral",
 						Value:     varInitializerValue.(string),
@@ -247,7 +242,6 @@ func processVariableStatement(contractDef *ContractDefinition, node map[string]i
 						Type:  varInitializerType,
 						Value: varInitializerValue.(bool),
 					}
-
 					varExpression = VariableExpression{
 						Type:  varInitializerType,
 						Value: varInitializerValue.(bool),
@@ -258,8 +252,6 @@ func processVariableStatement(contractDef *ContractDefinition, node map[string]i
 
 			}
 		}
-
-		// println("@processVariableStatement, varDeclarations type", varType, varIdName, varInitializerValue, varInitializerType)
 
 		if varExpression != nil {
 			svd.Variables[0].Expression = varExpression.(VariableExpression)
