@@ -8,7 +8,7 @@ Once we have a Solidity-compliant AST, we can either:
 
 ## Usage
 
-1. Create a Smart Contract and parse it using the [Ford parser](https://github.com/broyeztony/ford-solidity-parser). Example 
+1. Create a Ford Smart Contract and parse it using the [Ford parser](https://github.com/broyeztony/ford-solidity-parser). Example 
 ```ford
 contract PrimitiveTypes;
 
