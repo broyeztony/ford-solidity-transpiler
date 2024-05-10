@@ -57,7 +57,7 @@ type VariableExpression struct {
 	Number          string      `json:"number,omitempty"`
 	Parts           []string    `json:"parts,omitempty"`
 	IsUnicode       []bool      `json:"isUnicode,omitempty"`
-	Subdenomination interface{} `json:"subdenomination"`
+	Subdenomination interface{} `json:"subdenomination,omitempty"`
 }
 
 type VariableInitialValue struct {
@@ -66,7 +66,7 @@ type VariableInitialValue struct {
 	Number          string      `json:"number,omitempty"`
 	Parts           []string    `json:"parts,omitempty"`
 	IsUnicode       []bool      `json:"isUnicode,omitempty"`
-	Subdenomination interface{} `json:"subdenomination"`
+	Subdenomination interface{} `json:"subdenomination,omitempty"`
 }
 
 func main() {
@@ -130,16 +130,24 @@ func transpileAST(inputAST ASTNode) ContractDefinition {
 
 // processVariableStatement processes a variable statement and adds it to the contract definition.
 func processVariableStatement(contractDef *ContractDefinition, node map[string]interface{}) {
-	// This function should extract information from the node and add a corresponding
-	// state variable declaration to the contractDef.SubNodes
 
-	varDeclarations, _ := node["declarations"].([]interface{})
+	varDeclarations, ok := node["declarations"].([]interface{})
+	if !ok {
+		fmt.Println("Error: 'declarations' is not a valid node.")
+		return
+	}
 
-	for _, decl := range varDeclarations {
+	for _, declInterface := range varDeclarations {
 
-		var varIdName, _ = decl.(map[string]interface{})["id"].(map[string]interface{})["name"].(string)
-		var varInitializer, _ = decl.(map[string]interface{})["initializer"]
-		// var varInitializerValue interface{}
+		decl, ok := declInterface.(map[string]interface{})
+		if !ok {
+			fmt.Println("Error: Declaration is not a valid map.")
+			continue
+		}
+
+		varIdName, _ := decl["id"].(map[string]interface{})["name"].(string)
+		varInitializer := decl["initializer"].(map[string]interface{})
+
 		var varInitializerType string
 		var varInitialValue interface{} = nil
 		var varExpression interface{} = nil
@@ -163,93 +171,18 @@ func processVariableStatement(contractDef *ContractDefinition, node map[string]i
 				IsStateVar: true,
 			}},
 		}
-		//
 
 		if varInitializer != nil {
 
-			var varInitializerValue interface{}
-			varInitializerType, _ = decl.(map[string]interface{})["initializer"].(map[string]interface{})["type"].(string)
+			varInitializerType, _ = declInterface.(map[string]interface{})["initializer"].(map[string]interface{})["type"].(string)
 
-			if varInitializerType == "CallExpression" {
-				// var varInitializerCallee = varInitializerValue.(map[string]interface{})["callee"].(map[string]interface{})["name"].(string)
-				var varInitializerCallee, _ = varInitializer.(map[string]interface{})["callee"]
-				var varInitializerCalleeName, _ = varInitializerCallee.(map[string]interface{})["name"]
-
-				var varInitializerArguments, _ = varInitializer.(map[string]interface{})["arguments"].([]interface{})
-
-				var varInitializerFirstArgument = varInitializerArguments[0].(interface{})
-
-				// handling 'complicated' types
-				// (u8, u16, ..., u256, i8, i16, ..., i256, address)
-				if varInitializerCalleeName == "u8" {
-					var varInitializerFirstArgumentValue float64 = varInitializerFirstArgument.(map[string]interface{})["value"].(float64)
-					var number = strconv.FormatFloat(varInitializerFirstArgumentValue, 'f', -1, 64)
-					svd.Variables[0].TypeName.Name = "uint8"
-					varInitialValue = VariableInitialValue{
-						Type:            "NumberLiteral",
-						Number:          number,
-						Subdenomination: nil,
-					}
-
-					varExpression = VariableExpression{
-						Type:            "NumberLiteral",
-						Number:          number,
-						Subdenomination: nil,
-					}
-
-				} else if varInitializerCalleeName == "address" {
-
-					var varInitializerFirstArgumentValue = varInitializerFirstArgument.(map[string]interface{})["value"]
-					var numberStr = varInitializerFirstArgumentValue.(string)
-					svd.Variables[0].TypeName.Name = "address"
-
-					varInitialValue = VariableInitialValue{
-						Type:            "NumberLiteral",
-						Number:          numberStr,
-						Subdenomination: nil,
-					}
-
-					varExpression = VariableExpression{
-						Type:            "NumberLiteral",
-						Number:          numberStr,
-						Subdenomination: nil,
-					}
-				}
-			} else { // here variable's types are accessible directly
-				varInitializerValue = decl.(map[string]interface{})["initializer"].(map[string]interface{})["value"]
-
-				if varInitializerType == "StringLiteral" {
-
-					svd.Variables[0].TypeName.Name = "string"
-
-					varInitialValue = VariableInitialValue{
-						Type:      varInitializerType,
-						Value:     varInitializerValue.(string),
-						Parts:     []string{varInitializerValue.(string)},
-						IsUnicode: []bool{false},
-					}
-					varExpression = VariableExpression{
-						Type:      "StringLiteral",
-						Value:     varInitializerValue.(string),
-						Parts:     []string{varInitializerValue.(string)},
-						IsUnicode: []bool{false},
-					}
-				} else if varInitializerType == "BooleanLiteral" {
-
-					svd.Variables[0].TypeName.Name = "bool"
-
-					varInitialValue = VariableInitialValue{
-						Type:  varInitializerType,
-						Value: varInitializerValue.(bool),
-					}
-					varExpression = VariableExpression{
-						Type:  varInitializerType,
-						Value: varInitializerValue.(bool),
-					}
-				} else {
-					panic(fmt.Sprintf("unrecognized varInitializerType %v", varInitializerType))
-				}
-
+			switch varInitializerType {
+			case "CallExpression":
+				processCallExpressionInitializer(varInitializer, &svd)
+			case "StringLiteral", "BooleanLiteral":
+				processSimpleInitializer(varInitializer, &svd)
+			default:
+				fmt.Printf("Unrecognized initializer type: %s\n", varInitializerType)
 			}
 		}
 
@@ -262,6 +195,111 @@ func processVariableStatement(contractDef *ContractDefinition, node map[string]i
 		}
 
 		contractDef.SubNodes = append(contractDef.SubNodes, svd)
+	}
+}
+
+func processCallExpressionInitializer(varInitializer interface{}, svd *StateVariableDeclaration) {
+
+	var varInitialValue interface{} = nil
+	var varExpression interface{} = nil
+
+	var varInitializerCallee, _ = varInitializer.(map[string]interface{})["callee"]
+	var varInitializerCalleeName, _ = varInitializerCallee.(map[string]interface{})["name"]
+	var varInitializerArguments, _ = varInitializer.(map[string]interface{})["arguments"].([]interface{})
+	var varInitializerFirstArgument = varInitializerArguments[0].(interface{})
+
+	// handling 'complicated' types
+	// (u8, u16, ..., u256, i8, i16, ..., i256, address)
+	if varInitializerCalleeName == "u8" {
+		var varInitializerFirstArgumentValue float64 = varInitializerFirstArgument.(map[string]interface{})["value"].(float64)
+		var number = strconv.FormatFloat(varInitializerFirstArgumentValue, 'f', -1, 64)
+		svd.Variables[0].TypeName.Name = "uint8"
+		varInitialValue = VariableInitialValue{
+			Type:            "NumberLiteral",
+			Number:          number,
+			Subdenomination: nil,
+		}
+
+		varExpression = VariableExpression{
+			Type:            "NumberLiteral",
+			Number:          number,
+			Subdenomination: nil,
+		}
+
+	} else if varInitializerCalleeName == "address" {
+
+		var varInitializerFirstArgumentValue = varInitializerFirstArgument.(map[string]interface{})["value"]
+		var numberStr = varInitializerFirstArgumentValue.(string)
+		svd.Variables[0].TypeName.Name = "address"
+
+		varInitialValue = VariableInitialValue{
+			Type:            "NumberLiteral",
+			Number:          numberStr,
+			Subdenomination: nil,
+		}
+
+		varExpression = VariableExpression{
+			Type:            "NumberLiteral",
+			Number:          numberStr,
+			Subdenomination: nil,
+		}
+	}
+
+	if varExpression != nil {
+		svd.Variables[0].Expression = varExpression.(VariableExpression)
+	}
+
+	if varInitialValue != nil {
+		svd.InitialValue = varInitialValue.(VariableInitialValue)
+	}
+}
+
+func processSimpleInitializer(varInitializer interface{}, svd *StateVariableDeclaration) {
+
+	var varInitialValue interface{} = nil
+	var varExpression interface{} = nil
+
+	varInitializerType := varInitializer.(map[string]interface{})["type"].(string)
+	varInitializerValue := varInitializer.(map[string]interface{})["value"]
+
+	if varInitializerType == "StringLiteral" {
+
+		svd.Variables[0].TypeName.Name = "string"
+
+		varInitialValue = VariableInitialValue{
+			Type:      varInitializerType,
+			Value:     varInitializerValue.(string),
+			Parts:     []string{varInitializerValue.(string)},
+			IsUnicode: []bool{false},
+		}
+		varExpression = VariableExpression{
+			Type:      "StringLiteral",
+			Value:     varInitializerValue.(string),
+			Parts:     []string{varInitializerValue.(string)},
+			IsUnicode: []bool{false},
+		}
+	} else if varInitializerType == "BooleanLiteral" {
+
+		svd.Variables[0].TypeName.Name = "bool"
+
+		varInitialValue = VariableInitialValue{
+			Type:  varInitializerType,
+			Value: varInitializerValue.(bool),
+		}
+		varExpression = VariableExpression{
+			Type:  varInitializerType,
+			Value: varInitializerValue.(bool),
+		}
+	} else {
+		panic(fmt.Sprintf("unrecognized varInitializerType %v", varInitializerType))
+	}
+
+	if varExpression != nil {
+		svd.Variables[0].Expression = varExpression.(VariableExpression)
+	}
+
+	if varInitialValue != nil {
+		svd.InitialValue = varInitialValue.(VariableInitialValue)
 	}
 }
 
