@@ -26,18 +26,18 @@ type StateVariableDeclaration struct {
 }
 
 type Variable struct {
-	Type            string             `json:"type"`
-	TypeName        VariableTypeName   `json:"typeName"`
-	Name            string             `json:"name"`
-	Identifier      VariableIdentifier `json:"identifier"`
-	Expression      interface{}        `json:"expression"`
-	Visibility      string             `json:"visibility"`
-	IsStateVar      bool               `json:"isStateVar"`
-	IsDeclaredConst bool               `json:"isDeclaredConst"`
-	IsIndexed       bool               `json:"isIndexed"`
-	IsImmutable     bool               `json:"isImmutable"`
-	Override        interface{}        `json:"override"`
-	StorageLocation interface{}        `json:"storageLocation"`
+	Type            string           `json:"type"`
+	TypeName        VariableTypeName `json:"typeName"`
+	Name            interface{}      `json:"name"`
+	Identifier      interface{}      `json:"identifier"`
+	Expression      interface{}      `json:"expression,omitempty"`
+	Visibility      interface{}      `json:"visibility,omitempty"`
+	IsStateVar      bool             `json:"isStateVar"`
+	IsDeclaredConst bool             `json:"isDeclaredConst"`
+	IsIndexed       bool             `json:"isIndexed"`
+	IsImmutable     bool             `json:"isImmutable"`
+	Override        interface{}      `json:"override"`
+	StorageLocation interface{}      `json:"storageLocation"`
 }
 
 type VariableTypeName struct {
@@ -274,10 +274,127 @@ func (t *Transpiler) processSimpleInitializer(varInitializer interface{}, svd *S
 	}
 }
 
+// Define structures for the output AST
+type FunctionDefinition struct {
+	Type             string        `json:"type"`
+	Name             string        `json:"name"`
+	Parameters       []Variable    `json:"parameters"`
+	ReturnParameters []Variable    `json:"returnParameters"`
+	Body             Block         `json:"body"`
+	Visibility       string        `json:"visibility"`
+	Modifiers        []interface{} `json:"modifiers"` // Assuming modifiers can vary; adjust as needed
+	Override         interface{}   `json:"override"`  // Assuming override can vary; adjust as needed
+	IsConstructor    bool          `json:"isConstructor"`
+	IsReceiveEther   bool          `json:"isReceiveEther"`
+	IsFallback       bool          `json:"isFallback"`
+	IsVirtual        bool          `json:"isVirtual"`
+	StateMutability  string        `json:"stateMutability"`
+}
+
+type Block struct {
+	Type       string      `json:"type"`
+	Statements []Statement `json:"statements"`
+}
+
+type Statement struct {
+	Type       string     `json:"type"`
+	Expression Expression `json:"expression"`
+}
+
+type Expression struct {
+	Type     string             `json:"type"`
+	Operator string             `json:"operator"`
+	Left     VariableIdentifier `json:"left"`
+	Right    VariableIdentifier `json:"right"`
+}
+
 // processFunctionDeclaration processes a function declaration and adds it to the contract definition.
 func (t *Transpiler) processFunctionDeclaration(contractDef *ContractDefinition, node map[string]interface{}) {
-	// Implementation for processing function declarations
-	// This function should extract information from the node and add a corresponding
-	// function definition to the contractDef.SubNodes
 	println("@processFunctionDeclaration", node)
+
+	funcNameNode, ok := node["name"].(interface{})
+	if !ok {
+		fmt.Println("Error: 'FunctionDeclaration' is not a valid node.")
+		return
+	}
+
+	funcNameNodeDecl := funcNameNode.(map[string]interface{})
+	funcName, ok := funcNameNodeDecl["name"].(string)
+
+	if !ok {
+		fmt.Println("Error: invalid function's name.")
+		return
+	}
+
+	fdef := FunctionDefinition{
+		Type:             "FunctionDefinition",
+		Name:             funcName,
+		Parameters:       nil,
+		ReturnParameters: nil,
+		Body:             Block{},
+		Visibility:       "public", // TODO: handle all visibility settings
+		Modifiers:        nil,
+		Override:         nil,
+		IsConstructor:    false,
+		IsReceiveEther:   false,
+		IsFallback:       false,
+		IsVirtual:        false,
+		StateMutability:  "",
+	}
+
+	funcParams, ok := node["params"].(interface{})
+	funcParamsDecl := funcParams.([]interface{})
+
+	for _, declInterface := range funcParamsDecl { // processes all function's parameters
+
+		decl, ok := declInterface.(map[string]interface{})
+		if !ok {
+			fmt.Println("Error: `params` declaration is not a valid map.")
+			continue
+		}
+
+		// function's parameter's name
+		paramName, _ := decl["name"].(string)
+
+		variable := Variable{
+			Type: "VariableDeclaration",
+			TypeName: VariableTypeName{
+				Type:            "ElementaryTypeName",
+				Name:            "uint8", // use yaml spec to get the correct type
+				StateMutability: nil,
+			},
+			Name: paramName,
+			Identifier: VariableIdentifier{
+				Type: "Identifier",
+				Name: paramName,
+			},
+			Expression:      nil,
+			IsStateVar:      false,
+			IsDeclaredConst: false,
+			IsIndexed:       false,
+			IsImmutable:     false,
+			Override:        nil,
+			StorageLocation: nil,
+		}
+
+		fdef.Parameters = append(fdef.Parameters, variable)
+	}
+
+	// processes function's return statement
+	fdef.ReturnParameters = []Variable{{
+		Type: "VariableDeclaration",
+		TypeName: VariableTypeName{
+			Type:            "ElementaryTypeName",
+			Name:            "uint8", // use yaml spec to get the correct return type
+			StateMutability: nil,
+		},
+		Name:            nil,
+		Identifier:      nil,
+		Expression:      nil,
+		IsStateVar:      false,
+		IsIndexed:       false,
+		StorageLocation: nil,
+	}}
+
+	contractDef.SubNodes = append(contractDef.SubNodes, fdef)
 }
