@@ -1,0 +1,64 @@
+{
+  "body": [
+    {
+      "declarations": [
+        {
+          "id": {
+            "name": "x",
+            "type": "Identifier"
+          },
+          "initializer": {
+            "arguments": [
+              {
+                "type": "NumericLiteral",
+                "value": 1
+              }
+            ],
+            "callee": {
+              "name": "u8",
+              "type": "Identifier"
+            },
+            "type": "CallExpression"
+          },
+          "type": "VariableDeclaration"
+        }
+      ],
+      "type": "VariableStatement"
+    },
+    {
+      "body": {
+        "body": [
+          {
+            "argument": {
+              "left": {
+                "name": "x",
+                "type": "Identifier"
+              },
+              "operator": "+",
+              "right": {
+                "name": "y",
+                "type": "Identifier"
+              },
+              "type": "BinaryExpression"
+            },
+            "type": "ReturnStatement"
+          }
+        ],
+        "type": "BlockStatement"
+      },
+      "name": {
+        "name": "addToX",
+        "type": "Identifier"
+      },
+      "params": [
+        {
+          "name": "y",
+          "type": "Identifier"
+        }
+      ],
+      "type": "FunctionDeclaration"
+    }
+  ],
+  "name": "ViewAndPure",
+  "type": "Contract"
+}

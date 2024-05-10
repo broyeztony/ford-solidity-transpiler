@@ -9,7 +9,7 @@ import (
 
 func main() {
 
-	inputASTFilePath := "data/primitives.ast.json" // AST
+	inputASTFilePath := "data/functions.ast.json" // AST
 	inputAST, err := loadAndUnmarshalJSON(inputASTFilePath)
 	if err != nil {
 		fmt.Println("Error:", err)
