@@ -310,7 +310,6 @@ type Expression struct {
 
 // processFunctionDeclaration processes a function declaration and adds it to the contract definition.
 func (t *Transpiler) processFunctionDeclaration(contractDef *ContractDefinition, node map[string]interface{}) {
-	println("@processFunctionDeclaration", node)
 
 	funcNameNode, ok := node["name"].(interface{})
 	if !ok {
@@ -396,5 +395,60 @@ func (t *Transpiler) processFunctionDeclaration(contractDef *ContractDefinition,
 		StorageLocation: nil,
 	}}
 
+	// processes function's body
+	funcBody, ok := node["body"].(interface{})
+	if !ok {
+		fmt.Println("Error: function `body` is not a valid map.")
+		return
+	}
+
+	funcBodyStmts := funcBody.(map[string]interface{})["body"].([]interface{})
+
+	fdef.Body.Type = "Block"
+	modifiers := make([]interface{}, 0)
+	fdef.Modifiers = modifiers
+	fdef.StateMutability = "view" /// TODO: handle `view` and `pure` stateMutability settings
+
+	for _, bodyStmt := range funcBodyStmts { // processes all function's body's statements
+
+		stmtType := bodyStmt.(map[string]interface{})["type"].(string)
+		// fmt.Println("@stmtType", stmtType)
+
+		var stmt Statement
+
+		switch stmtType {
+		case "ReturnStatement":
+
+			stmtTypeArgument := bodyStmt.(map[string]interface{})["argument"]
+			stmtTypeArgumentType := stmtTypeArgument.(map[string]interface{})["type"].(string)
+			stmtTypeArgumentOperator := stmtTypeArgument.(map[string]interface{})["operator"].(string)
+
+			// fmt.Println("@stmtTypeArgumentType", stmtTypeArgumentType)
+			// fmt.Println("@stmtTypeArgumentOperator", stmtTypeArgumentOperator)
+
+			stmtTypeArgumentLeft := stmtTypeArgument.(map[string]interface{})["left"].(map[string]interface{})
+			stmtTypeArgumentRight := stmtTypeArgument.(map[string]interface{})["right"].(map[string]interface{})
+
+			stmt = Statement{
+				Type: "ReturnStatement", // TODO: handle every Ford statement types
+				Expression: Expression{
+					Type:     stmtTypeArgumentType,     // TODO: handle every Ford expression types
+					Operator: stmtTypeArgumentOperator, // TODO: handle every Ford BinaryExpression operators
+					Left: VariableIdentifier{
+						Type: stmtTypeArgumentLeft["type"].(string),
+						Name: stmtTypeArgumentLeft["name"].(string),
+					},
+					Right: VariableIdentifier{
+						Type: stmtTypeArgumentRight["type"].(string),
+						Name: stmtTypeArgumentRight["name"].(string),
+					},
+				},
+			}
+		}
+
+		fdef.Body.Statements = append(fdef.Body.Statements, stmt)
+	}
+
+	// append the function definition to the contractDef's subNodes
 	contractDef.SubNodes = append(contractDef.SubNodes, fdef)
 }
