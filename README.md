@@ -287,7 +287,7 @@ contract PrimitiveTypes {
 
 1. Given the below Ford Smart Contract
 ```ford
-contract ViewAndPure;
+contract View;
 
 let x = u8(1);
 
@@ -301,17 +301,18 @@ def addToX(y) {
 and the companion metadata file
 ```yaml
 state:
-    - name: x
-      type: u8
+  - name: x
+    type: u8
 
 defs:
-    - name: addToX
-      parameters:
-        y: u8
-      returnType: u8
-      visibility:
-          - public
-          - view
+  - name: addToX
+    parameters:
+      y: u8
+    returnType: u8
+    visibility:
+      - public
+    stateMutability:
+      - view
 
 events: {}
 ```
