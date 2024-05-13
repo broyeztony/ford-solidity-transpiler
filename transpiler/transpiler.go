@@ -311,14 +311,14 @@ type Expression struct {
 // processFunctionDeclaration processes a function declaration and adds it to the contract definition.
 func (t *Transpiler) processFunctionDeclaration(contractDef *ContractDefinition, node map[string]interface{}) {
 
-	funcNameNode, ok := node["name"].(interface{})
+	funcNameNode, ok := node["name"].(interface{}) /* { name: "addToX", type: "Identifier" }  */
 	if !ok {
 		fmt.Println("Error: 'FunctionDeclaration' is not a valid node.")
 		return
 	}
 
 	funcNameNodeDecl := funcNameNode.(map[string]interface{})
-	funcName, ok := funcNameNodeDecl["name"].(string)
+	funcName, ok := funcNameNodeDecl["name"].(string) // extract the function's name, i.e "addToX"
 
 	if !ok {
 		fmt.Println("Error: invalid function's name.")
@@ -342,24 +342,24 @@ func (t *Transpiler) processFunctionDeclaration(contractDef *ContractDefinition,
 	}
 
 	funcParams, ok := node["params"].(interface{})
-	funcParamsDecl := funcParams.([]interface{})
+	funcParamsDecl := funcParams.([]interface{}) // [ { name: "y", type: "Identifier" }, ... ]
 
-	for _, declInterface := range funcParamsDecl { // processes all function's parameters
+	for _, declInterface := range funcParamsDecl { // extract each function's parameter
 
-		decl, ok := declInterface.(map[string]interface{})
+		decl, ok := declInterface.(map[string]interface{}) // i.e, { name: "y", type: "Identifier" }
 		if !ok {
 			fmt.Println("Error: `params` declaration is not a valid map.")
 			continue
 		}
 
 		// function's parameter's name
-		paramName, _ := decl["name"].(string)
+		paramName, _ := decl["name"].(string) // i.e `y`
 
 		variable := Variable{
 			Type: "VariableDeclaration",
 			TypeName: VariableTypeName{
 				Type:            "ElementaryTypeName",
-				Name:            "uint8", // use yaml spec to get the correct type
+				Name:            "uint8", // TODO: use yaml spec to get the correct type
 				StateMutability: nil,
 			},
 			Name: paramName,
@@ -379,12 +379,14 @@ func (t *Transpiler) processFunctionDeclaration(contractDef *ContractDefinition,
 		fdef.Parameters = append(fdef.Parameters, variable)
 	}
 
-	// processes function's return statement
+	// process return parameters, !if there is one!
+	// TOOD: handle null return parameters also
+	// TODO: this require the metadata.yaml spec file to read the function's return type
 	fdef.ReturnParameters = []Variable{{
 		Type: "VariableDeclaration",
 		TypeName: VariableTypeName{
 			Type:            "ElementaryTypeName",
-			Name:            "uint8", // use yaml spec to get the correct return type
+			Name:            "uint8", // TODO: use yaml spec to extract the correct return type
 			StateMutability: nil,
 		},
 		Name:            nil,
@@ -396,54 +398,28 @@ func (t *Transpiler) processFunctionDeclaration(contractDef *ContractDefinition,
 	}}
 
 	// processes function's body
-	funcBody, ok := node["body"].(interface{})
+	funcBody, ok := node["body"].(interface{}) // i.e { body: [ ...statements ], type: "BlockStatement" }
 	if !ok {
 		fmt.Println("Error: function `body` is not a valid map.")
 		return
 	}
 
-	funcBodyStmts := funcBody.(map[string]interface{})["body"].([]interface{})
+	funcBodyStmts := funcBody.(map[string]interface{})["body"].([]interface{}) // i.e [ ...statements ]
 
 	fdef.Body.Type = "Block"
-	modifiers := make([]interface{}, 0)
-	fdef.Modifiers = modifiers
+	fdef.Modifiers = make([]interface{}, 0)
 	fdef.StateMutability = "view" /// TODO: handle `view` and `pure` stateMutability settings
 
-	for _, bodyStmt := range funcBodyStmts { // processes all function's body's statements
+	for _, bodyStmt := range funcBodyStmts { // processes each function's body's statements
 
 		stmtType := bodyStmt.(map[string]interface{})["type"].(string)
-		// fmt.Println("@stmtType", stmtType)
+		fmt.Println("@stmtType", stmtType)
 
 		var stmt Statement
 
 		switch stmtType {
 		case "ReturnStatement":
-
-			stmtTypeArgument := bodyStmt.(map[string]interface{})["argument"]
-			stmtTypeArgumentType := stmtTypeArgument.(map[string]interface{})["type"].(string)
-			stmtTypeArgumentOperator := stmtTypeArgument.(map[string]interface{})["operator"].(string)
-
-			// fmt.Println("@stmtTypeArgumentType", stmtTypeArgumentType)
-			// fmt.Println("@stmtTypeArgumentOperator", stmtTypeArgumentOperator)
-
-			stmtTypeArgumentLeft := stmtTypeArgument.(map[string]interface{})["left"].(map[string]interface{})
-			stmtTypeArgumentRight := stmtTypeArgument.(map[string]interface{})["right"].(map[string]interface{})
-
-			stmt = Statement{
-				Type: "ReturnStatement", // TODO: handle every Ford statement types
-				Expression: Expression{
-					Type:     stmtTypeArgumentType,     // TODO: handle every Ford expression types
-					Operator: stmtTypeArgumentOperator, // TODO: handle every Ford BinaryExpression operators
-					Left: VariableIdentifier{
-						Type: stmtTypeArgumentLeft["type"].(string),
-						Name: stmtTypeArgumentLeft["name"].(string),
-					},
-					Right: VariableIdentifier{
-						Type: stmtTypeArgumentRight["type"].(string),
-						Name: stmtTypeArgumentRight["name"].(string),
-					},
-				},
-			}
+			stmt = t.processReturnStatement(bodyStmt)
 		}
 
 		fdef.Body.Statements = append(fdef.Body.Statements, stmt)
