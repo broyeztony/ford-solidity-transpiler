@@ -413,7 +413,7 @@ func (t *Transpiler) processFunctionDeclaration(contractDef *ContractDefinition,
 	for _, bodyStmt := range funcBodyStmts { // processes each function's body's statements
 
 		stmtType := bodyStmt.(map[string]interface{})["type"].(string)
-		fmt.Println("@stmtType", stmtType)
+		// fmt.Println("@stmtType", stmtType)
 
 		var stmt Statement
 

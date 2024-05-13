@@ -1,12 +1,10 @@
 package transpiler
 
-import "fmt"
-
 func (t *Transpiler) processReturnStatement(body interface{}) Statement {
 
 	stmtTypeArgument := body.(map[string]interface{})["argument"]
 	stmtTypeArgumentType := stmtTypeArgument.(map[string]interface{})["type"].(string)
-	fmt.Println("@stmtType", stmtTypeArgumentType)
+	// fmt.Println("@stmtType", stmtTypeArgumentType)
 
 	var stmt Statement
 	switch stmtTypeArgumentType {
